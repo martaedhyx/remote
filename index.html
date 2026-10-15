@@ -14,6 +14,13 @@ label{display:block;font-size:14px;margin:12px 0 5px}input{width:100%;padding:12
 button{width:100%;margin-top:12px;padding:12px;border:1px solid var(--cyan);border-radius:8px;background:#001b1b;color:var(--cyan);font:600 16px inherit;cursor:pointer}button:disabled{opacity:.5;cursor:not-allowed}button.primary{background:var(--cyan);color:#000}
 .code{font-size:25px;font-weight:700;letter-spacing:2px;overflow-wrap:anywhere}.status{min-height:24px;margin-top:12px;color:#aff}.bad{color:#ff6b8a}.good{color:#75ffb1}
 video{width:100%;background:#000;border:1px solid #087777;border-radius:8px;max-height:65vh;margin-top:10px}.hidden{display:none}footer{text-align:center;color:#679;padding:8px 16px 24px;font-size:12px}
+.filebox{margin-top:12px;padding:12px;border:1px solid #087777;border-radius:10px;background:#02090b}
+.filebox input[type=file]{margin-top:8px;font-size:13px}
+.filelist{display:grid;gap:7px;margin-top:10px}
+.fileitem{display:flex;justify-content:space-between;gap:10px;padding:8px;border:1px solid #164444;border-radius:8px;color:#d7ffff;font-size:12px;overflow-wrap:anywhere}
+.filemeta{color:#8bb;white-space:nowrap}
+.file-note{font-size:12px;color:#8bb;margin:8px 0 0}
+
 </style>
 </head>
 <body>
@@ -40,6 +47,16 @@ video{width:100%;background:#000;border:1px solid #087777;border-radius:8px;max-
 <button id="disconnectBtn" disabled>Putuskan koneksi</button>
 <div class="status" id="clientStatus" role="status">Belum terhubung.</div>
 <video id="remoteVideo" autoplay playsinline controls class="hidden"></video>
+</section>
+<section class="card">
+<h2>③ Pilih file di HP atau komputer ini</h2>
+<p>Pilih foto, video, atau dokumen secara manual. Pada versi ini, pemilihan file masih lokal dan belum mengirim file ke perangkat lain.</p>
+<div class="filebox">
+<label for="localFiles">Pilih file</label>
+<input id="localFiles" type="file" multiple>
+<div id="selectedFiles" class="filelist"></div>
+<p id="fileStatus" class="file-note">Belum ada file yang dipilih. File tidak diunggah ke server.</p>
+</div>
 </section>
 <section class="card" style="grid-column:1/-1">
 <h2>Catatan keamanan dan batasan</h2>
@@ -173,6 +190,22 @@ video{width:100%;background:#000;border:1px solid #087777;border-radius:8px;max-
    setTimeout(()=>{if(!$('remoteVideo').srcObject){status(clientStatus,'Belum menerima layar. Pastikan laptop masih aktif, ID benar, dan berbagi layar sudah dimulai. Jika kedua perangkat memakai jaringan berbeda, koneksi WebRTC mungkin membutuhkan TURN.','bad');$('connectBtn').disabled=false;}},20000);
  };
  $('disconnectBtn').onclick=()=>{stopCall();if(peer){try{peer.destroy()}catch(e){}peer=null;}status(clientStatus,'Koneksi diputus.');$('connectBtn').disabled=false;};
+ // File picker: local-only in this release; no upload or remote transfer occurs.
+ const localFiles=$('localFiles'), selectedFiles=$('selectedFiles'), fileStatus=$('fileStatus');
+ const formatBytes=n=>n<1024?n+' B':n<1048576?(n/1024).toFixed(1)+' KB':n<1073741824?(n/1048576).toFixed(1)+' MB':(n/1073741824).toFixed(2)+' GB';
+ localFiles.addEventListener('change',()=>{
+   const files=Array.from(localFiles.files||[]);
+   selectedFiles.replaceChildren();
+   let total=0;
+   files.forEach(file=>{
+     total+=file.size;
+     const row=document.createElement('div');row.className='fileitem';
+     const name=document.createElement('span');name.textContent=file.name;
+     const size=document.createElement('span');size.className='filemeta';size.textContent=formatBytes(file.size);
+     row.append(name,size);selectedFiles.append(row);
+   });
+   fileStatus.textContent=files.length?files.length+' file dipilih • total '+formatBytes(total)+'. File tetap berada di perangkat ini dan belum dikirim.':'Belum ada file yang dipilih. File tidak diunggah ke server.';
+ });
 })();
 </script>
 </body></html>
