@@ -1,120 +1,117 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>edhy robot</title>
-    <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #000000; color: #00ffff; margin: 0; padding: 0; display: flex; height: 100vh; }
-        .sidebar { width: 250px; background-color: #000000; padding: 20px; box-sizing: border-box; border-right: 1px solid #00ffff; display: flex; flex-direction: column; }
-        .sidebar h2 { margin-top: 0; color: #00ffff; text-shadow: 0 0 8px #00ffff; text-align: center; }
-        
-        /* Gaya untuk video maskot tanpa merubah bentuk dan warna */
-        .mascot-video { 
-            width: 100%; 
-            border-radius: 10px; 
-            margin: 15px 0 25px 0; 
-            border: 1px solid #00ffff; 
-            box-shadow: 0 0 15px rgba(0, 255, 255, 0.4); 
-            object-fit: contain; /* Memastikan rasio asli video tetap sama tanpa terpotong atau berubah bentuk */
-            background-color: #000000; /* Mengikuti warna background utama */
-        }
-
-        .menu-item { padding: 12px 10px; margin-bottom: 5px; cursor: pointer; color: #00aaaa; border-radius: 5px; transition: 0.3s; }
-        .menu-item:hover { color: #00ffff; background-color: #111111; text-shadow: 0 0 5px #00ffff; }
-        .active { background-color: #002222; color: #00ffff; border: 1px solid #00ffff; box-shadow: 0 0 5px #00ffff inset; }
-        .main-content { flex: 1; padding: 40px; display: flex; flex-wrap: wrap; gap: 40px; overflow-y: auto; align-content: flex-start; }
-        .card { background-color: #000000; padding: 30px; border-radius: 10px; flex: 1; min-width: 300px; border: 1px solid #00ffff; box-shadow: 0 0 15px rgba(0, 255, 255, 0.2); }
-        .card h3 { margin-top: 0; border-bottom: 1px solid #00ffff; padding-bottom: 15px; font-weight: normal; text-shadow: 0 0 5px #00ffff; }
-        .form-group { margin-bottom: 20px; }
-        .form-group label { display: block; margin-bottom: 8px; color: #00ffff; font-size: 14px; }
-        .form-group input { width: 100%; padding: 12px; background-color: #000000; border: 1px solid #00aaaa; color: #00ffff; border-radius: 6px; box-sizing: border-box; font-size: 16px; transition: all 0.3s; }
-        .form-group input:focus { outline: none; border-color: #00ffff; box-shadow: 0 0 10px #00ffff; }
-        .btn { background-color: #000000; color: #00ffff; border: 1px solid #00ffff; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-size: 16px; width: 100%; transition: all 0.3s; font-weight: bold; box-shadow: 0 0 8px rgba(0,255,255,0.3); }
-        .btn:hover { background-color: #00ffff; color: #000000; box-shadow: 0 0 15px #00ffff; }
-        .btn-outline { background-color: transparent; border: 1px solid #00ffff; color: #00ffff; margin-top: 10px; }
-        .btn-outline:hover { background-color: #00ffff; color: #000000; box-shadow: 0 0 15px #00ffff; }
-        .id-display { font-size: 32px; font-weight: bold; letter-spacing: 2px; color: #00ffff; margin-bottom: 10px; text-shadow: 0 0 15px #00ffff; }
-        .desc { color: #00cccc; font-size: 14px; margin-bottom: 25px; line-height: 1.5; }
-    </style>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#000000"><title>Edhy Robot — Remote</title>
+<style>
+:root{color-scheme:dark;--cyan:#00ffff;--dim:#00aaaa;--panel:#080d0f}*{box-sizing:border-box}
+body{margin:0;background:#000;color:var(--cyan);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+header{padding:18px 16px;border-bottom:1px solid #064b4b;text-align:center}h1{font-size:clamp(22px,5vw,32px);margin:0;text-shadow:0 0 12px #00ffff}header p{margin:4px 0 0;color:#9de}
+main{max-width:900px;margin:auto;padding:16px;display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))}
+.card{border:1px solid #087777;border-radius:14px;background:var(--panel);padding:18px;box-shadow:0 0 16px #00ffff12;min-width:0}
+h2{font-size:19px;margin:0 0 10px}p{color:#b7dada}.muted{font-size:13px;color:#8bb}
+label{display:block;font-size:14px;margin:12px 0 5px}input{width:100%;padding:12px;border:1px solid #087777;border-radius:8px;background:#000;color:#fff;font:inherit}
+button{width:100%;margin-top:12px;padding:12px;border:1px solid var(--cyan);border-radius:8px;background:#001b1b;color:var(--cyan);font:600 16px inherit;cursor:pointer}button:disabled{opacity:.5;cursor:not-allowed}button.primary{background:var(--cyan);color:#000}
+.code{font-size:25px;font-weight:700;letter-spacing:2px;overflow-wrap:anywhere}.status{min-height:24px;margin-top:12px;color:#aff}.bad{color:#ff6b8a}.good{color:#75ffb1}
+video{width:100%;background:#000;border:1px solid #087777;border-radius:8px;max-height:65vh;margin-top:10px}.hidden{display:none}footer{text-align:center;color:#679;padding:8px 16px 24px;font-size:12px}
+</style>
 </head>
 <body>
-    <div class="sidebar">
-        <h2>🌐 edhy robot</h2>
-        
-        <!-- Video Maskot -->
-        <video autoplay loop muted playsinline class="mascot-video">
-            <!-- Pastikan nama file ini sama dengan video yang ada di folder Anda -->
-            <source src="gemini_generated_video_9C0C05AF_3.mov" type="video/mp4">
-            Browser Anda tidak mendukung tag video.
-        </video>
-
-        <div class="menu-item active">Beranda</div>
-        <div class="menu-item">Buku Alamat</div>
-        <div class="menu-item">Riwayat Koneksi</div>
-        <div class="menu-item">Pengaturan</div>
-    </div>
-    <div class="main-content">
-        <div class="card">
-            <h3>Perangkat Ini</h3>
-            <p class="desc">Bagikan ID dan Kata Sandi di bawah ini untuk mengizinkan perangkat lain mengakses dan mengendalikan perangkat ini.</p>
-            <div class="form-group">
-                <label>ID Perangkat Anda</label>
-                <div class="id-display" id="my-id">832 941 055</div>
-            </div>
-            <div class="form-group">
-                <label>Kata Sandi Sementara</label>
-                <input type="text" id="my-password" value="xyz987" readonly>
-            </div>
-            <button class="btn btn-outline" onclick="generateNewPassword()">Acak Kata Sandi Baru</button>
-        </div>
-        <div class="card">
-            <h3>Kontrol Jarak Jauh</h3>
-            <p class="desc">Masukkan ID dari perangkat yang ingin Anda hubungkan dan kendalikan dari sini.</p>
-            <div class="form-group">
-                <label>ID Perangkat Target</label>
-                <input type="text" id="target-id" placeholder="Contoh: 123 456 789" autocomplete="off">
-            </div>
-            <button class="btn" onclick="connectToDevice()">Mulai Koneksi</button>
-            <div id="status" style="margin-top: 20px; font-weight: bold; text-align: center; color: #00ffff; text-shadow: 0 0 5px #00ffff;"></div>
-        </div>
-    </div>
-
-    <script>
-        function generateNewPassword() {
-            const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
-            let pass = "";
-            for(let i=0; i<6; i++) {
-                pass += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
-            document.getElementById('my-password').value = pass;
-            
-            const btn = document.querySelector('.btn-outline');
-            btn.innerHTML = "Telah Diperbarui!";
-            setTimeout(() => btn.innerHTML = "Acak Kata Sandi Baru", 1500);
-        }
-
-        function connectToDevice() {
-            const targetId = document.getElementById('target-id').value.trim();
-            const statusDiv = document.getElementById('status');
-            
-            if(!targetId) {
-                statusDiv.innerHTML = "<span style='color: #ff0055; text-shadow: 0 0 5px #ff0055;'>⚠️ Harap masukkan ID target terlebih dahulu!</span>";
-                return;
-            }
-            
-            statusDiv.innerHTML = "⏳ Menghubungkan ke " + targetId + "...";
-            
-            // Simulasi proses koneksi
-            setTimeout(() => {
-                statusDiv.innerHTML = "🔒 Memverifikasi keamanan...";
-                
-                setTimeout(() => {
-                    statusDiv.innerHTML = "<span style='color: #ff0055; text-shadow: 0 0 5px #ff0055;'>❌ Gagal terhubung. (Ini hanya UI HTML/JS tanpa server WebRTC backend)</span>";
-                }, 1500);
-                
-            }, 1500);
-        }
-    </script>
-</body>
-</html>
+<header><h1>EDHY ROBOT</h1><p>Remote Screen • Koneksi terenkripsi WebRTC</p></header>
+<main>
+<section class="card">
+<h2>① Komputer yang dibagikan</h2>
+<p>Buka halaman ini di laptop. Tekan mulai, lalu pilih layar/jendela yang ingin dibagikan dan setujui permintaan browser.</p>
+<button class="primary" id="startHost">Mulai berbagi layar komputer</button>
+<label>ID komputer (bagikan hanya kepada orang tepercaya)</label>
+<div class="code" id="hostId">Belum aktif</div>
+<label>Kata sandi sesi</label>
+<div class="code" id="hostPass">—</div>
+<button id="stopHost" disabled>Hentikan berbagi</button>
+<div class="status" id="hostStatus" role="status">Menunggu dimulai.</div>
+<video id="localVideo" autoplay muted playsinline class="hidden"></video>
+</section>
+<section class="card">
+<h2>② Lihat komputer dari HP</h2>
+<p>Di HP, masukkan ID dan kata sandi yang tampil di laptop, lalu hubungkan.</p>
+<label for="targetId">ID komputer</label><input id="targetId" autocomplete="off" placeholder="Tempel ID dari laptop">
+<label for="targetPass">Kata sandi sesi</label><input id="targetPass" autocomplete="off" placeholder="Masukkan kata sandi" type="password">
+<button class="primary" id="connectBtn">Hubungkan dan lihat layar</button>
+<button id="disconnectBtn" disabled>Putuskan koneksi</button>
+<div class="status" id="clientStatus" role="status">Belum terhubung.</div>
+<video id="remoteVideo" autoplay playsinline controls class="hidden"></video>
+</section>
+<section class="card" style="grid-column:1/-1">
+<h2>Catatan keamanan dan batasan</h2>
+<p>Versi ini menguji koneksi nyata untuk <b>melihat layar</b>, bukan mengendalikan mouse/keyboard atau masuk ke file komputer. Laptop harus tetap menyala, halaman ini terbuka, dan berbagi layar disetujui secara manual. Jangan bagikan ID/kata sandi ke orang lain.</p>
+<p class="muted">Memerlukan internet dan browser modern yang mendukung berbagi layar. Pada Windows 7/browser lama, fitur berbagi layar mungkin tidak tersedia. Layanan pensinyalan PeerJS publik digunakan untuk memulai koneksi; koneksi media memakai WebRTC. Koneksi dapat gagal jika jaringan memblokir WebRTC.</p>
+</section>
+</main>
+<footer>EDHY ROBOT · akses hanya dengan persetujuan pemilik komputer</footer>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script>
+(function(){
+ const $=id=>document.getElementById(id);
+ let peer=null, stream=null, activeCall=null, sessionPassword='';
+ const hostStatus=$('hostStatus'),clientStatus=$('clientStatus');
+ function status(el,msg,kind){el.textContent=msg;el.className='status '+(kind||'');}
+ function randomPassword(){const a='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';let s='';for(let i=0;i<8;i++)s+=a[Math.floor(Math.random()*a.length)];return s;}
+ function stopCall(){if(activeCall){try{activeCall.close()}catch(e){}activeCall=null;} $('remoteVideo').srcObject=null;$('remoteVideo').classList.add('hidden');$('disconnectBtn').disabled=true;}
+ $('startHost').onclick=async()=>{
+   if(!window.Peer){status(hostStatus,'Library koneksi gagal dimuat. Periksa internet lalu muat ulang.','bad');return;}
+   if(!navigator.mediaDevices||!navigator.mediaDevices.getDisplayMedia){status(hostStatus,'Browser ini tidak mendukung berbagi layar. Coba browser modern di laptop.','bad');return;}
+   $('startHost').disabled=true;
+   try{
+     stream=await navigator.mediaDevices.getDisplayMedia({video:true,audio:false});
+     $('localVideo').srcObject=stream;$('localVideo').classList.remove('hidden');
+     sessionPassword=randomPassword();$('hostPass').textContent=sessionPassword;
+     peer=new Peer(undefined,{debug:0});
+     peer.on('open',id=>{$('hostId').textContent=id;status(hostStatus,'Siap. Masukkan ID dan kata sandi ini di HP.','good');$('stopHost').disabled=false;});
+     peer.on('call',call=>{
+       const supplied=call.metadata&&call.metadata.password;
+       if(supplied!==sessionPassword){call.close();return;}
+       if(activeCall)activeCall.close();
+       activeCall=call;call.answer(stream);
+       call.on('close',()=>{if(activeCall===call)activeCall=null;status(hostStatus,'Penonton terputus. ID tetap aktif.');});
+       status(hostStatus,'HP terhubung dan sedang melihat layar.','good');
+     });
+     peer.on('error',e=>status(hostStatus,'Koneksi error: '+(e.type||'tidak diketahui')+'. Coba mulai ulang.','bad'));
+     stream.getVideoTracks()[0].addEventListener('ended',()=>stopHost());
+   }catch(e){
+     $('startHost').disabled=false;
+     status(hostStatus,e.name==='NotAllowedError'?'Berbagi layar dibatalkan. Setujui pemilihan layar untuk melanjutkan.':'Tidak bisa memulai: '+(e.message||e.name),'bad');
+   }
+ };
+ function stopHost(){
+   stopCall();
+   if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}
+   if(peer){try{peer.destroy()}catch(e){}peer=null;}
+   $('localVideo').srcObject=null;$('localVideo').classList.add('hidden');
+   $('hostId').textContent='Belum aktif';$('hostPass').textContent='—';$('stopHost').disabled=true;$('startHost').disabled=false;
+   status(hostStatus,'Berbagi layar dihentikan.');
+ }
+ $('stopHost').onclick=stopHost;
+ $('connectBtn').onclick=()=>{
+   const id=$('targetId').value.trim(),password=$('targetPass').value;
+   if(!id||!password){status(clientStatus,'Masukkan ID dan kata sandi dari laptop.','bad');return;}
+   if(!window.Peer){status(clientStatus,'Library koneksi gagal dimuat. Periksa internet.','bad');return;}
+   stopCall();$('connectBtn').disabled=true;status(clientStatus,'Mencoba menghubungi komputer…');
+   peer=new Peer(undefined,{debug:0});
+   peer.on('open',()=>{
+     activeCall=peer.call(id,new MediaStream(),{metadata:{password:password}});
+     if(!activeCall){status(clientStatus,'Tidak dapat memulai panggilan. Periksa ID komputer.','bad');$('connectBtn').disabled=false;return;}
+     activeCall.on('stream',remoteStream=>{
+       $('remoteVideo').srcObject=remoteStream;$('remoteVideo').classList.remove('hidden');
+       $('disconnectBtn').disabled=false;status(clientStatus,'Terhubung — layar komputer sedang ditampilkan.','good');
+       $('connectBtn').disabled=false;
+     });
+     activeCall.on('close',()=>{stopCall();status(clientStatus,'Koneksi berakhir.');$('connectBtn').disabled=false;});
+     activeCall.on('error',()=>{stopCall();status(clientStatus,'Koneksi gagal. Pastikan laptop aktif dan ID/kata sandi benar.','bad');$('connectBtn').disabled=false;});
+     setTimeout(()=>{if(!$('remoteVideo').srcObject){status(clientStatus,'Belum menerima layar. Pastikan laptop sudah mulai berbagi dan ID/kata sandi benar.','bad');$('connectBtn').disabled=false;}},12000);
+   });
+   peer.on('error',e=>{status(clientStatus,'Koneksi error: '+(e.type||'tidak diketahui')+'. Pastikan kedua perangkat online.','bad');$('connectBtn').disabled=false;});
+ };
+ $('disconnectBtn').onclick=()=>{stopCall();if(peer){try{peer.destroy()}catch(e){}peer=null;}status(clientStatus,'Koneksi diputus.');$('connectBtn').disabled=false;};
+})();
+</script>
+</body></html>
