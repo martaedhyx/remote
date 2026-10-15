@@ -16,12 +16,13 @@ async def handler(websocket, path):
             cmd = json.loads(raw)
             action = cmd.get("action")
             width, height = pyautogui.size()
-            if action == "click":
+            if action in ("move", "click"):
                 x = max(0, min(width - 1, int(float(cmd.get("x", 0)) * width)))
                 y = max(0, min(height - 1, int(float(cmd.get("y", 0)) * height)))
                 pyautogui.moveTo(x, y, duration=0)
-                button = "right" if cmd.get("button") == "right" else "left"
-                pyautogui.click(x, y, button=button)
+                if action == "click":
+                    button = "right" if cmd.get("button") == "right" else "left"
+                    pyautogui.click(x, y, button=button)
             elif action == "type":
                 text = str(cmd.get("text", ""))[:500]
                 # pyautogui.write supports ASCII reliably on older Windows.
