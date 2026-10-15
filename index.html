@@ -177,6 +177,7 @@ video{width:100%;background:#000;border:1px solid #087777;border-radius:8px;max-
  };
  function sendControl(command){if(authConn&&authConn.open){authConn.send({type:'control',command:command});}}
  const rv=$('remoteVideo');
+ let lastMove=0;rv.addEventListener('pointermove',e=>{const now=Date.now();if(now-lastMove<90)return;lastMove=now;const r=rv.getBoundingClientRect();if(r.width&&r.height)sendControl({action:'move',x:Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)),y:Math.max(0,Math.min(1,(e.clientY-r.top)/r.height))});});
  rv.addEventListener('click',e=>{const r=rv.getBoundingClientRect();if(r.width&&r.height)sendControl({action:'click',x:Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)),y:Math.max(0,Math.min(1,(e.clientY-r.top)/r.height)),button:'left'});});
  rv.addEventListener('contextmenu',e=>{e.preventDefault();const r=rv.getBoundingClientRect();sendControl({action:'click',x:Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)),y:Math.max(0,Math.min(1,(e.clientY-r.top)/r.height)),button:'right'});});
  $('sendTextBtn').onclick=()=>{const v=$('remoteType').value;if(v){sendControl({action:'type',text:v});$('remoteType').value='';}};
