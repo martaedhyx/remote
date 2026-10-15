@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>edhy robot</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #000000; color: #00ffff; margin: 0; padding: 0; display: flex; height: 100vh; }
+        .sidebar { width: 250px; background-color: #000000; padding: 20px; box-sizing: border-box; border-right: 1px solid #00ffff; display: flex; flex-direction: column; }
+        .sidebar h2 { margin-top: 0; color: #00ffff; text-shadow: 0 0 8px #00ffff; text-align: center; }
+        
+        /* Gaya untuk video maskot tanpa merubah bentuk dan warna */
+        .mascot-video { 
+            width: 100%; 
+            border-radius: 10px; 
+            margin: 15px 0 25px 0; 
+            border: 1px solid #00ffff; 
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.4); 
+            object-fit: contain; /* Memastikan rasio asli video tetap sama tanpa terpotong atau berubah bentuk */
+            background-color: #000000; /* Mengikuti warna background utama */
+        }
+
+        .menu-item { padding: 12px 10px; margin-bottom: 5px; cursor: pointer; color: #00aaaa; border-radius: 5px; transition: 0.3s; }
+        .menu-item:hover { color: #00ffff; background-color: #111111; text-shadow: 0 0 5px #00ffff; }
+        .active { background-color: #002222; color: #00ffff; border: 1px solid #00ffff; box-shadow: 0 0 5px #00ffff inset; }
+        .main-content { flex: 1; padding: 40px; display: flex; flex-wrap: wrap; gap: 40px; overflow-y: auto; align-content: flex-start; }
+        .card { background-color: #000000; padding: 30px; border-radius: 10px; flex: 1; min-width: 300px; border: 1px solid #00ffff; box-shadow: 0 0 15px rgba(0, 255, 255, 0.2); }
+        .card h3 { margin-top: 0; border-bottom: 1px solid #00ffff; padding-bottom: 15px; font-weight: normal; text-shadow: 0 0 5px #00ffff; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; color: #00ffff; font-size: 14px; }
+        .form-group input { width: 100%; padding: 12px; background-color: #000000; border: 1px solid #00aaaa; color: #00ffff; border-radius: 6px; box-sizing: border-box; font-size: 16px; transition: all 0.3s; }
+        .form-group input:focus { outline: none; border-color: #00ffff; box-shadow: 0 0 10px #00ffff; }
+        .btn { background-color: #000000; color: #00ffff; border: 1px solid #00ffff; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-size: 16px; width: 100%; transition: all 0.3s; font-weight: bold; box-shadow: 0 0 8px rgba(0,255,255,0.3); }
+        .btn:hover { background-color: #00ffff; color: #000000; box-shadow: 0 0 15px #00ffff; }
+        .btn-outline { background-color: transparent; border: 1px solid #00ffff; color: #00ffff; margin-top: 10px; }
+        .btn-outline:hover { background-color: #00ffff; color: #000000; box-shadow: 0 0 15px #00ffff; }
+        .id-display { font-size: 32px; font-weight: bold; letter-spacing: 2px; color: #00ffff; margin-bottom: 10px; text-shadow: 0 0 15px #00ffff; }
+        .desc { color: #00cccc; font-size: 14px; margin-bottom: 25px; line-height: 1.5; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>🌐 edhy robot</h2>
+        
+        <!-- Video Maskot -->
+        <video autoplay loop muted playsinline class="mascot-video">
+            <!-- Pastikan nama file ini sama dengan video yang ada di folder Anda -->
+            <source src="gemini_generated_video_9C0C05AF_3.mov" type="video/mp4">
+            Browser Anda tidak mendukung tag video.
+        </video>
+
+        <div class="menu-item active">Beranda</div>
+        <div class="menu-item">Buku Alamat</div>
+        <div class="menu-item">Riwayat Koneksi</div>
+        <div class="menu-item">Pengaturan</div>
+    </div>
+    <div class="main-content">
+        <div class="card">
+            <h3>Perangkat Ini</h3>
+            <p class="desc">Bagikan ID dan Kata Sandi di bawah ini untuk mengizinkan perangkat lain mengakses dan mengendalikan perangkat ini.</p>
+            <div class="form-group">
+                <label>ID Perangkat Anda</label>
+                <div class="id-display" id="my-id">832 941 055</div>
+            </div>
+            <div class="form-group">
+                <label>Kata Sandi Sementara</label>
+                <input type="text" id="my-password" value="xyz987" readonly>
+            </div>
+            <button class="btn btn-outline" onclick="generateNewPassword()">Acak Kata Sandi Baru</button>
+        </div>
+        <div class="card">
+            <h3>Kontrol Jarak Jauh</h3>
+            <p class="desc">Masukkan ID dari perangkat yang ingin Anda hubungkan dan kendalikan dari sini.</p>
+            <div class="form-group">
+                <label>ID Perangkat Target</label>
+                <input type="text" id="target-id" placeholder="Contoh: 123 456 789" autocomplete="off">
+            </div>
+            <button class="btn" onclick="connectToDevice()">Mulai Koneksi</button>
+            <div id="status" style="margin-top: 20px; font-weight: bold; text-align: center; color: #00ffff; text-shadow: 0 0 5px #00ffff;"></div>
+        </div>
+    </div>
+
+    <script>
+        function generateNewPassword() {
+            const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+            let pass = "";
+            for(let i=0; i<6; i++) {
+                pass += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            document.getElementById('my-password').value = pass;
+            
+            const btn = document.querySelector('.btn-outline');
+            btn.innerHTML = "Telah Diperbarui!";
+            setTimeout(() => btn.innerHTML = "Acak Kata Sandi Baru", 1500);
+        }
+
+        function connectToDevice() {
+            const targetId = document.getElementById('target-id').value.trim();
+            const statusDiv = document.getElementById('status');
+            
+            if(!targetId) {
+                statusDiv.innerHTML = "<span style='color: #ff0055; text-shadow: 0 0 5px #ff0055;'>⚠️ Harap masukkan ID target terlebih dahulu!</span>";
+                return;
+            }
+            
+            statusDiv.innerHTML = "⏳ Menghubungkan ke " + targetId + "...";
+            
+            // Simulasi proses koneksi
+            setTimeout(() => {
+                statusDiv.innerHTML = "🔒 Memverifikasi keamanan...";
+                
+                setTimeout(() => {
+                    statusDiv.innerHTML = "<span style='color: #ff0055; text-shadow: 0 0 5px #ff0055;'>❌ Gagal terhubung. (Ini hanya UI HTML/JS tanpa server WebRTC backend)</span>";
+                }, 1500);
+                
+            }, 1500);
+        }
+    </script>
+</body>
+</html>
