@@ -54,6 +54,18 @@ video{width:100%;background:#000;border:1px solid #087777;border-radius:8px;max-
  const $=id=>document.getElementById(id);
  let peer=null, stream=null, activeCall=null, authConn=null, sessionPassword='';
  const hostStatus=$('hostStatus'),clientStatus=$('clientStatus');
+ // Visible diagnostics: never leave the user with a silent button.
+ window.addEventListener('error',e=>{
+   const msg=(e.message||'Kesalahan JavaScript tidak diketahui').toString().slice(0,180);
+   status(clientStatus,'Kesalahan aplikasi: '+msg+'. Muat ulang halaman.','bad');
+   status(hostStatus,'Kesalahan aplikasi: '+msg+'. Muat ulang halaman.','bad');
+ });
+ window.addEventListener('unhandledrejection',e=>{
+   const reason=e.reason;
+   const msg=(reason&&reason.message?reason.message:String(reason||'Promise gagal')).slice(0,180);
+   status(clientStatus,'Proses gagal: '+msg,'bad');
+ });
+
  function status(el,msg,kind){el.textContent=msg;el.className='status '+(kind||'');}
  function randomPassword(){const a='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';let s='';for(let i=0;i<8;i++)s+=a[Math.floor(Math.random()*a.length)];return s;}
  function stopCall(){if(activeCall){try{activeCall.close()}catch(e){}activeCall=null;}if(authConn){try{authConn.close()}catch(e){}authConn=null;}$('remoteVideo').srcObject=null;$('remoteVideo').classList.add('hidden');$('disconnectBtn').disabled=true;}
@@ -97,10 +109,20 @@ video{width:100%;background:#000;border:1px solid #087777;border-radius:8px;max-
  $('connectBtn').onclick=()=>{
    const id=$('targetId').value.trim(),password=$('targetPass').value;
    if(!id||!password){status(clientStatus,'Masukkan ID dan kata sandi dari laptop.','bad');return;}
-   if(!window.Peer){status(clientStatus,'Library koneksi gagal dimuat. Periksa internet.','bad');return;}
-   stopCall();$('connectBtn').disabled=true;status(clientStatus,'Menghubungi komputer…');
-   peer=new Peer(undefined,{debug:0});
+   if(!window.Peer){status(clientStatus,'Library PeerJS tidak termuat. Periksa internet, lalu muat ulang halaman.','bad');return;}
+   // Destroy an old client peer before retrying, so repeated taps don't leave stale peers.
+   stopCall();
+   if(peer){try{peer.destroy()}catch(e){}peer=null;}
+   $('connectBtn').disabled=true;
+   status(clientStatus,'Membuka koneksi ke layanan…');
+   let settled=false;
+   const connectTimer=setTimeout(()=>{
+     if(!settled){status(clientStatus,'Layanan koneksi belum merespons. Periksa internet atau coba lagi.','bad');$('connectBtn').disabled=false;}
+   },12000);
+   peer=new Peer(undefined,{debug:1});
    peer.on('open',()=>{
+     settled=true;clearTimeout(connectTimer);
+     status(clientStatus,'ID layanan aktif. Menghubungi komputer…');
      authConn=peer.connect(id,{reliable:true,metadata:{password:password}});
      authConn.on('open',()=>status(clientStatus,'Memverifikasi kata sandi sesi…'));
      authConn.on('data',msg=>{if(!msg||!msg.ok){status(clientStatus,'Akses ditolak. Periksa kata sandi sesi.','bad');$('connectBtn').disabled=false;return;}status(clientStatus,'Terverifikasi. Menunggu video layar…');});
@@ -115,8 +137,20 @@ video{width:100%;background:#000;border:1px solid #087777;border-radius:8px;max-
      });
      call.on('error',()=>{stopCall();status(clientStatus,'Video gagal diterima. Coba ulangi koneksi.','bad');$('connectBtn').disabled=false;});
    });
-   peer.on('error',e=>{status(clientStatus,'Koneksi error: '+(e.type||'tidak diketahui')+'. Pastikan kedua perangkat online.','bad');$('connectBtn').disabled=false;});
-   setTimeout(()=>{if(!$('remoteVideo').srcObject){status(clientStatus,'Belum menerima layar. Pastikan laptop sudah mulai berbagi dan ID/kata sandi benar.','bad');$('connectBtn').disabled=false;}},15000);
+   peer.on('error',e=>{
+     settled=true;clearTimeout(connectTimer);
+     const details=e.type||e.message||'tidak diketahui';
+     const hints={
+       'peer-unavailable':'ID komputer tidak aktif atau salah. Pastikan laptop masih menampilkan ID yang sama.',
+       'network':'Tidak bisa mencapai layanan koneksi. Periksa internet kedua perangkat.',
+       'browser-incompatible':'Browser ini tidak mendukung WebRTC. Coba browser yang lebih baru.',
+       'server-error':'Layanan koneksi tidak dapat dijangkau. Coba lagi nanti.',
+       'webrtc':'Jaringan menghalangi koneksi langsung. Koneksi ini mungkin memerlukan server TURN.'
+     };
+     status(clientStatus,(hints[details]||('Koneksi error: '+details+'. Pastikan kedua perangkat online.')),'bad');
+     $('connectBtn').disabled=false;
+   });
+   setTimeout(()=>{if(!$('remoteVideo').srcObject){status(clientStatus,'Belum menerima layar. Pastikan laptop masih aktif, ID benar, dan berbagi layar sudah dimulai. Jika kedua perangkat memakai jaringan berbeda, koneksi WebRTC mungkin membutuhkan TURN.','bad');$('connectBtn').disabled=false;}},20000);
  };
  $('disconnectBtn').onclick=()=>{stopCall();if(peer){try{peer.destroy()}catch(e){}peer=null;}status(clientStatus,'Koneksi diputus.');$('connectBtn').disabled=false;};
 })();
