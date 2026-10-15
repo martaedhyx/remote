@@ -52,11 +52,11 @@ video{width:100%;background:#000;border:1px solid #087777;border-radius:8px;max-
 <script>
 (function(){
  const $=id=>document.getElementById(id);
- let peer=null, stream=null, activeCall=null, sessionPassword='';
+ let peer=null, stream=null, activeCall=null, authConn=null, sessionPassword='';
  const hostStatus=$('hostStatus'),clientStatus=$('clientStatus');
  function status(el,msg,kind){el.textContent=msg;el.className='status '+(kind||'');}
  function randomPassword(){const a='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';let s='';for(let i=0;i<8;i++)s+=a[Math.floor(Math.random()*a.length)];return s;}
- function stopCall(){if(activeCall){try{activeCall.close()}catch(e){}activeCall=null;} $('remoteVideo').srcObject=null;$('remoteVideo').classList.add('hidden');$('disconnectBtn').disabled=true;}
+ function stopCall(){if(activeCall){try{activeCall.close()}catch(e){}activeCall=null;}if(authConn){try{authConn.close()}catch(e){}authConn=null;}$('remoteVideo').srcObject=null;$('remoteVideo').classList.add('hidden');$('disconnectBtn').disabled=true;}
  $('startHost').onclick=async()=>{
    if(!window.Peer){status(hostStatus,'Library koneksi gagal dimuat. Periksa internet lalu muat ulang.','bad');return;}
    if(!navigator.mediaDevices||!navigator.mediaDevices.getDisplayMedia){status(hostStatus,'Browser ini tidak mendukung berbagi layar. Coba browser modern di laptop.','bad');return;}
@@ -67,13 +67,16 @@ video{width:100%;background:#000;border:1px solid #087777;border-radius:8px;max-
      sessionPassword=randomPassword();$('hostPass').textContent=sessionPassword;
      peer=new Peer(undefined,{debug:0});
      peer.on('open',id=>{$('hostId').textContent=id;status(hostStatus,'Siap. Masukkan ID dan kata sandi ini di HP.','good');$('stopHost').disabled=false;});
-     peer.on('call',call=>{
-       const supplied=call.metadata&&call.metadata.password;
-       if(supplied!==sessionPassword){call.close();return;}
-       if(activeCall)activeCall.close();
-       activeCall=call;call.answer(stream);
-       call.on('close',()=>{if(activeCall===call)activeCall=null;status(hostStatus,'Penonton terputus. ID tetap aktif.');});
-       status(hostStatus,'HP terhubung dan sedang melihat layar.','good');
+     peer.on('connection',conn=>{
+       conn.on('open',()=>{
+         if(!conn.metadata||conn.metadata.password!==sessionPassword){conn.send({ok:false});conn.close();return;}
+         conn.send({ok:true});
+         const call=peer.call(conn.peer,stream);
+         if(!call){status(hostStatus,'Tidak dapat memulai video. Coba ulangi koneksi.','bad');return;}
+         activeCall=call;
+         call.on('close',()=>{if(activeCall===call)activeCall=null;status(hostStatus,'Penonton terputus. ID tetap aktif.');});
+         status(hostStatus,'HP terhubung dan sedang melihat layar.','good');
+       });
      });
      peer.on('error',e=>status(hostStatus,'Koneksi error: '+(e.type||'tidak diketahui')+'. Coba mulai ulang.','bad'));
      stream.getVideoTracks()[0].addEventListener('ended',()=>stopHost());
@@ -95,21 +98,25 @@ video{width:100%;background:#000;border:1px solid #087777;border-radius:8px;max-
    const id=$('targetId').value.trim(),password=$('targetPass').value;
    if(!id||!password){status(clientStatus,'Masukkan ID dan kata sandi dari laptop.','bad');return;}
    if(!window.Peer){status(clientStatus,'Library koneksi gagal dimuat. Periksa internet.','bad');return;}
-   stopCall();$('connectBtn').disabled=true;status(clientStatus,'Mencoba menghubungi komputer…');
+   stopCall();$('connectBtn').disabled=true;status(clientStatus,'Menghubungi komputer…');
    peer=new Peer(undefined,{debug:0});
    peer.on('open',()=>{
-     activeCall=peer.call(id,new MediaStream(),{metadata:{password:password}});
-     if(!activeCall){status(clientStatus,'Tidak dapat memulai panggilan. Periksa ID komputer.','bad');$('connectBtn').disabled=false;return;}
-     activeCall.on('stream',remoteStream=>{
+     authConn=peer.connect(id,{reliable:true,metadata:{password:password}});
+     authConn.on('open',()=>status(clientStatus,'Memverifikasi kata sandi sesi…'));
+     authConn.on('data',msg=>{if(!msg||!msg.ok){status(clientStatus,'Akses ditolak. Periksa kata sandi sesi.','bad');$('connectBtn').disabled=false;return;}status(clientStatus,'Terverifikasi. Menunggu video layar…');});
+     authConn.on('error',()=>{status(clientStatus,'Koneksi gagal. Periksa ID dan pastikan laptop aktif.','bad');$('connectBtn').disabled=false;});
+   });
+   peer.on('call',call=>{
+     activeCall=call;call.answer();
+     call.on('stream',remoteStream=>{
        $('remoteVideo').srcObject=remoteStream;$('remoteVideo').classList.remove('hidden');
        $('disconnectBtn').disabled=false;status(clientStatus,'Terhubung — layar komputer sedang ditampilkan.','good');
        $('connectBtn').disabled=false;
      });
-     activeCall.on('close',()=>{stopCall();status(clientStatus,'Koneksi berakhir.');$('connectBtn').disabled=false;});
-     activeCall.on('error',()=>{stopCall();status(clientStatus,'Koneksi gagal. Pastikan laptop aktif dan ID/kata sandi benar.','bad');$('connectBtn').disabled=false;});
-     setTimeout(()=>{if(!$('remoteVideo').srcObject){status(clientStatus,'Belum menerima layar. Pastikan laptop sudah mulai berbagi dan ID/kata sandi benar.','bad');$('connectBtn').disabled=false;}},12000);
+     call.on('error',()=>{stopCall();status(clientStatus,'Video gagal diterima. Coba ulangi koneksi.','bad');$('connectBtn').disabled=false;});
    });
    peer.on('error',e=>{status(clientStatus,'Koneksi error: '+(e.type||'tidak diketahui')+'. Pastikan kedua perangkat online.','bad');$('connectBtn').disabled=false;});
+   setTimeout(()=>{if(!$('remoteVideo').srcObject){status(clientStatus,'Belum menerima layar. Pastikan laptop sudah mulai berbagi dan ID/kata sandi benar.','bad');$('connectBtn').disabled=false;}},15000);
  };
  $('disconnectBtn').onclick=()=>{stopCall();if(peer){try{peer.destroy()}catch(e){}peer=null;}status(clientStatus,'Koneksi diputus.');$('connectBtn').disabled=false;};
 })();
