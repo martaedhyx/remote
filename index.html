@@ -23,9 +23,9 @@ video{width:100%;background:#000;border:1px solid #087777;border-radius:8px;max-
 <h2>① Komputer yang dibagikan</h2>
 <p>Buka halaman ini di laptop. Tekan mulai, lalu pilih layar/jendela yang ingin dibagikan dan setujui permintaan browser.</p>
 <button class="primary" id="startHost">Mulai berbagi layar komputer</button>
-<label>ID komputer (bagikan hanya kepada orang tepercaya)</label>
+<label>ID komputer (6 digit angka; bagikan hanya kepada orang tepercaya)</label>
 <div class="code" id="hostId">Belum aktif</div>
-<label>Kata sandi sesi</label>
+<label>Kata sandi sesi (6 huruf kapital)</label>
 <div class="code" id="hostPass">—</div>
 <button id="stopHost" disabled>Hentikan berbagi</button>
 <div class="status" id="hostStatus" role="status">Menunggu dimulai.</div>
@@ -34,8 +34,8 @@ video{width:100%;background:#000;border:1px solid #087777;border-radius:8px;max-
 <section class="card">
 <h2>② Lihat komputer dari HP</h2>
 <p>Di HP, masukkan ID dan kata sandi yang tampil di laptop, lalu hubungkan.</p>
-<label for="targetId">ID komputer</label><input id="targetId" autocomplete="off" placeholder="Tempel ID dari laptop">
-<label for="targetPass">Kata sandi sesi</label><input id="targetPass" autocomplete="off" placeholder="Masukkan kata sandi" type="password">
+<label for="targetId">ID komputer</label><input id="targetId" autocomplete="off" placeholder="6 digit angka">
+<label for="targetPass">Kata sandi sesi</label><input id="targetPass" autocomplete="off" placeholder="6 huruf kapital" type="password">
 <button class="primary" id="connectBtn">Hubungkan dan lihat layar</button>
 <button id="disconnectBtn" disabled>Putuskan koneksi</button>
 <div class="status" id="clientStatus" role="status">Belum terhubung.</div>
@@ -67,7 +67,8 @@ video{width:100%;background:#000;border:1px solid #087777;border-radius:8px;max-
  });
 
  function status(el,msg,kind){el.textContent=msg;el.className='status '+(kind||'');}
- function randomPassword(){const a='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';let s='';for(let i=0;i<8;i++)s+=a[Math.floor(Math.random()*a.length)];return s;}
+ function randomPassword(){const a='ABCDEFGHJKLMNPQRSTUVWXYZ';let s='';for(let i=0;i<6;i++)s+=a[Math.floor(Math.random()*a.length)];return s;}
+ function randomNumericId(){return String(Math.floor(100000+Math.random()*900000));}
  function stopCall(){if(activeCall){try{activeCall.close()}catch(e){}activeCall=null;}if(authConn){try{authConn.close()}catch(e){}authConn=null;}$('remoteVideo').srcObject=null;$('remoteVideo').classList.add('hidden');$('disconnectBtn').disabled=true;}
  $('startHost').onclick=async()=>{
    if(!window.Peer){status(hostStatus,'Library koneksi gagal dimuat. Periksa internet lalu muat ulang.','bad');return;}
@@ -77,20 +78,39 @@ video{width:100%;background:#000;border:1px solid #087777;border-radius:8px;max-
      stream=await navigator.mediaDevices.getDisplayMedia({video:true,audio:false});
      $('localVideo').srcObject=stream;$('localVideo').classList.remove('hidden');
      sessionPassword=randomPassword();$('hostPass').textContent=sessionPassword;
-     peer=new Peer(undefined,{debug:0});
-     peer.on('open',id=>{$('hostId').textContent=id;status(hostStatus,'Siap. Masukkan ID dan kata sandi ini di HP.','good');$('stopHost').disabled=false;});
-     peer.on('connection',conn=>{
-       conn.on('open',()=>{
-         if(!conn.metadata||conn.metadata.password!==sessionPassword){conn.send({ok:false});conn.close();return;}
-         conn.send({ok:true});
-         const call=peer.call(conn.peer,stream);
-         if(!call){status(hostStatus,'Tidak dapat memulai video. Coba ulangi koneksi.','bad');return;}
-         activeCall=call;
-         call.on('close',()=>{if(activeCall===call)activeCall=null;status(hostStatus,'Penonton terputus. ID tetap aktif.');});
-         status(hostStatus,'HP terhubung dan sedang melihat layar.','good');
+     // Use a six-digit numeric ID. Retry if another active peer already owns it.
+     const startPeer=(attempt=0)=>{
+       const chosenId=randomNumericId();
+       const hostPeer=new Peer(chosenId,{debug:0});
+       peer=hostPeer;
+       hostPeer.on('open',id=>{
+         if(peer!==hostPeer)return;
+         $('hostId').textContent=id;
+         status(hostStatus,'Siap. Masukkan ID 6 digit dan sandi 6 huruf ini di HP.','good');
+         $('stopHost').disabled=false;
        });
-     });
-     peer.on('error',e=>status(hostStatus,'Koneksi error: '+(e.type||'tidak diketahui')+'. Coba mulai ulang.','bad'));
+       hostPeer.on('connection',conn=>{
+         conn.on('open',()=>{
+           if(!conn.metadata||conn.metadata.password!==sessionPassword){conn.send({ok:false});conn.close();return;}
+           conn.send({ok:true});
+           const call=hostPeer.call(conn.peer,stream);
+           if(!call){status(hostStatus,'Tidak dapat memulai video. Coba ulangi koneksi.','bad');return;}
+           activeCall=call;
+           call.on('close',()=>{if(activeCall===call)activeCall=null;status(hostStatus,'Penonton terputus. ID tetap aktif.');});
+           status(hostStatus,'HP terhubung dan sedang melihat layar.','good');
+         });
+       });
+       hostPeer.on('error',e=>{
+         if(peer!==hostPeer)return;
+         if(e.type==='unavailable-id' && attempt<10){
+           try{hostPeer.destroy()}catch(_){}
+           startPeer(attempt+1);
+           return;
+         }
+         status(hostStatus,'Koneksi error: '+(e.type||'tidak diketahui')+'. Coba mulai ulang.','bad');
+       });
+     };
+     startPeer();
      stream.getVideoTracks()[0].addEventListener('ended',()=>stopHost());
    }catch(e){
      $('startHost').disabled=false;
