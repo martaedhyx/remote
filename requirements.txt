@@ -1,0 +1,2 @@
+websockets==9.1
+PyAutoGUI==0.9.54
