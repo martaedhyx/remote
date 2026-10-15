@@ -39,11 +39,11 @@ video{width:100%;background:#000;border:1px solid #087777;border-radius:8px;max-
 <button class="primary" id="connectBtn">Hubungkan dan lihat layar</button>
 <button id="disconnectBtn" disabled>Putuskan koneksi</button>
 <div class="status" id="clientStatus" role="status">Belum terhubung.</div>
-<video id="remoteVideo" autoplay playsinline controls tabindex="0" class="hidden"></video><p class="muted">Kontrol: sentuh video untuk klik, tahan/geser untuk menggerakkan kursor. Ketuk area ini lalu gunakan keyboard HP untuk mengetik.</p><input id="remoteType" autocomplete="off" placeholder="Ketik di sini, lalu tekan Kirim ke laptop"><button id="sendTextBtn">Kirim teks ke laptop</button><button id="sendEnterBtn">Enter</button><button id="sendEscBtn">Esc</button>
+<video id="remoteVideo" autoplay playsinline controls class="hidden"></video>
 </section>
 <section class="card" style="grid-column:1/-1">
 <h2>Catatan keamanan dan batasan</h2>
-<p>Untuk kontrol mouse/keyboard, jalankan agent lokal Edhy di laptop dan setujui kontrol saat memulai sesi. Laptop harus tetap menyala, halaman ini terbuka, dan berbagi layar disetujui secara manual. Jangan bagikan ID/kata sandi ke orang lain.</p>
+<p>Versi ini menguji koneksi nyata untuk <b>melihat layar</b>, bukan mengendalikan mouse/keyboard atau masuk ke file komputer. Laptop harus tetap menyala, halaman ini terbuka, dan berbagi layar disetujui secara manual. Jangan bagikan ID/kata sandi ke orang lain.</p>
 <p class="muted">Memerlukan internet dan browser modern yang mendukung berbagi layar. Pada Windows 7/browser lama, fitur berbagi layar mungkin tidak tersedia. Layanan pensinyalan PeerJS publik digunakan untuk memulai koneksi; koneksi media memakai WebRTC. Koneksi dapat gagal jika jaringan memblokir WebRTC.</p>
 </section>
 </main>
@@ -52,7 +52,7 @@ video{width:100%;background:#000;border:1px solid #087777;border-radius:8px;max-
 <script>
 (function(){
  const $=id=>document.getElementById(id);
- let peer=null, stream=null, activeCall=null, authConn=null, sessionPassword='', agentSocket=null, controlAllowed=false;
+ let peer=null, stream=null, activeCall=null, authConn=null, sessionPassword='';
  const hostStatus=$('hostStatus'),clientStatus=$('clientStatus');
  // Visible diagnostics: never leave the user with a silent button.
  window.addEventListener('error',e=>{
@@ -76,8 +76,6 @@ video{width:100%;background:#000;border:1px solid #087777;border-radius:8px;max-
    $('startHost').disabled=true;
    try{
      stream=await navigator.mediaDevices.getDisplayMedia({video:true,audio:false});
-     controlAllowed=window.confirm('Izinkan mouse dan keyboard dari HP untuk sesi ini? Pilih Batal jika hanya ingin berbagi layar.');
-     if(controlAllowed){try{agentSocket=new WebSocket('ws://127.0.0.1:8765');agentSocket.onopen=()=>status(hostStatus,'Agent kontrol lokal tersambung. Menyiapkan sesi…');agentSocket.onerror=()=>status(hostStatus,'Layar dibagikan, tetapi agent kontrol belum berjalan. Jalankan remote_agent.py di laptop.','bad');}catch(e){agentSocket=null;}}
      $('localVideo').srcObject=stream;$('localVideo').classList.remove('hidden');
      sessionPassword=randomPassword();$('hostPass').textContent=sessionPassword;
      // Use a six-digit numeric ID. Retry if another active peer already owns it.
@@ -94,8 +92,7 @@ video{width:100%;background:#000;border:1px solid #087777;border-radius:8px;max-
        hostPeer.on('connection',conn=>{
          conn.on('open',()=>{
            if(!conn.metadata||conn.metadata.password!==sessionPassword){conn.send({ok:false});conn.close();return;}
-           conn.send({ok:true,control:controlAllowed});
-           conn.on('data',msg=>{if(!controlAllowed||!msg||msg.type!=='control'||!agentSocket||agentSocket.readyState!==WebSocket.OPEN)return;try{agentSocket.send(JSON.stringify(msg.command));}catch(e){}});
+           conn.send({ok:true});
            const call=hostPeer.call(conn.peer,stream);
            if(!call){status(hostStatus,'Tidak dapat memulai video. Coba ulangi koneksi.','bad');return;}
            activeCall=call;
@@ -148,7 +145,7 @@ video{width:100%;background:#000;border:1px solid #087777;border-radius:8px;max-
      status(clientStatus,'ID layanan aktif. Menghubungi komputer…');
      authConn=peer.connect(id,{reliable:true,metadata:{password:password}});
      authConn.on('open',()=>status(clientStatus,'Memverifikasi kata sandi sesi…'));
-     authConn.on('data',msg=>{if(!msg||!msg.ok){status(clientStatus,'Akses ditolak. Periksa kata sandi sesi.','bad');$('connectBtn').disabled=false;return;}status(clientStatus,msg.control?'Terverifikasi. Kontrol tersedia jika agent laptop aktif. Menunggu video…':'Terverifikasi. Mode lihat layar saja. Menunggu video…');});
+     authConn.on('data',msg=>{if(!msg||!msg.ok){status(clientStatus,'Akses ditolak. Periksa kata sandi sesi.','bad');$('connectBtn').disabled=false;return;}status(clientStatus,'Terverifikasi. Menunggu video layar…');});
      authConn.on('error',()=>{status(clientStatus,'Koneksi gagal. Periksa ID dan pastikan laptop aktif.','bad');$('connectBtn').disabled=false;});
    });
    peer.on('call',call=>{
@@ -175,14 +172,6 @@ video{width:100%;background:#000;border:1px solid #087777;border-radius:8px;max-
    });
    setTimeout(()=>{if(!$('remoteVideo').srcObject){status(clientStatus,'Belum menerima layar. Pastikan laptop masih aktif, ID benar, dan berbagi layar sudah dimulai. Jika kedua perangkat memakai jaringan berbeda, koneksi WebRTC mungkin membutuhkan TURN.','bad');$('connectBtn').disabled=false;}},20000);
  };
- function sendControl(command){if(authConn&&authConn.open){authConn.send({type:'control',command:command});}}
- const rv=$('remoteVideo');
- let lastMove=0;rv.addEventListener('pointermove',e=>{const now=Date.now();if(now-lastMove<90)return;lastMove=now;const r=rv.getBoundingClientRect();if(r.width&&r.height)sendControl({action:'move',x:Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)),y:Math.max(0,Math.min(1,(e.clientY-r.top)/r.height))});});
- rv.addEventListener('click',e=>{const r=rv.getBoundingClientRect();if(r.width&&r.height)sendControl({action:'click',x:Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)),y:Math.max(0,Math.min(1,(e.clientY-r.top)/r.height)),button:'left'});});
- rv.addEventListener('contextmenu',e=>{e.preventDefault();const r=rv.getBoundingClientRect();sendControl({action:'click',x:Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)),y:Math.max(0,Math.min(1,(e.clientY-r.top)/r.height)),button:'right'});});
- $('sendTextBtn').onclick=()=>{const v=$('remoteType').value;if(v){sendControl({action:'type',text:v});$('remoteType').value='';}};
- $('sendEnterBtn').onclick=()=>sendControl({action:'key',key:'enter'});
- $('sendEscBtn').onclick=()=>sendControl({action:'key',key:'esc'});
  $('disconnectBtn').onclick=()=>{stopCall();if(peer){try{peer.destroy()}catch(e){}peer=null;}status(clientStatus,'Koneksi diputus.');$('connectBtn').disabled=false;};
 })();
 </script>
